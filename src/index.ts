@@ -20,58 +20,54 @@ import { deleteServer } from './services/Server';
   return this.getTime();
 };
 
-if (cluster.isPrimary) {
-  let cpuCount = cpus().length;
-
-  if (env.DEV_MODE) {
-    cpuCount = 1;
-  }
-  let prismaConnected = false;
-
+const start = async () => {
   await connectRedis();
-  await customRedisFlush();
   await createQueueProcessor({
     prefix: env.TYPE,
     redisClient,
   });
-
-  // await redisClient.hSet('testKey', { test1: 'lol', test2: 'lol2' });
-
-  // console.log(await redisClient.hGetAll('testKey'));
-
   createIO();
-  prisma.$connect().then(() => {
-    Log.info('Connected to PostgreSQL');
+  await prisma.$connect();
+  Log.info(`Worker ${process.pid} connected to PostgreSQL and Redis.`);
 
-    if (prismaConnected) return;
+  // Only worker 0 should run the scheduled jobs
+  if (env.TYPE === 'api' && process.env.CLUSTER_INDEX === '0') {
+    Log.info(`Worker ${process.pid} (ID 0) is setting up scheduled jobs.`);
+    scheduleBumpReset();
+    vacuumSchedule();
+    scheduleDeleteMessages();
+    scheduleDeleteAccountContent();
+    removeIPAddressSchedule();
+    schedulePostViews();
+    scheduleSuspendedAccountDeletion();
+    scheduleServerDeletion();
+    removeExpiredBannedIpsSchedule();
+    removeExpiredSuspensions();
+  }
 
-    prismaConnected = true;
+  // Start the web server
+  import('./worker');
+};
 
-    if (env.TYPE === 'api') {
-      scheduleBumpReset();
-      vacuumSchedule();
-      scheduleDeleteMessages();
-      scheduleDeleteAccountContent();
-      removeIPAddressSchedule();
-      schedulePostViews();
-      scheduleSuspendedAccountDeletion();
-      scheduleServerDeletion();
-      removeExpiredBannedIpsSchedule();
-      removeExpiredSuspensions();
-    }
-  });
+if (cluster.isPrimary) {
+  const cpuCount = Math.min(cpus().length, 4); // Use a max of 4 CPUs for stability
+  Log.info(`Primary process ${process.pid} is running. Forking ${cpuCount} workers...`);
+
+  // Flush Redis once before forking workers
+  connectRedis().then(() => customRedisFlush());
 
   for (let i = 0; i < cpuCount; i++) {
     cluster.fork({ CLUSTER_INDEX: i });
   }
 
-  cluster.on('exit', (worker, code, signal) => {
-    console.error(`Worker process ${worker.process.pid} died.`);
-    // have to just restart all clusters because of redis cache issues with socket.io online users.
-    process.exit(code);
+  cluster.on('exit', (worker, code) => {
+    // If a worker dies, log it and start a new one to maintain capacity
+    Log.error(`Worker ${worker.process.pid} died with code: ${code}. Forking a new worker...`);
+    cluster.fork({ CLUSTER_INDEX: worker.id - 1 });
   });
 } else {
-  import('./worker');
+  // This is a worker process, start the application logic
+  start();
 }
 
 function scheduleBumpReset() {
