@@ -6,7 +6,7 @@ services:
   - type: web
     name: cannacured-api
     runtime: node
-    plan: starter 
+    plan: standard   
     healthCheckPath: /health # Add a /health route to your Express app for monitoring
     buildCommand: pnpm install && pnpm build
     startCommand: pnpm prisma:migrate_deploy && pnpm start-dist-api
@@ -30,7 +30,7 @@ services:
   - type: web
     name: cannacured-ws
     runtime: node
-    plan: starter
+    plan: standard
     healthCheckPath: /health
     buildCommand: pnpm install && pnpm build
     startCommand: pnpm start-dist-ws
