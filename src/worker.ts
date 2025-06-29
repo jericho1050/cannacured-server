@@ -42,7 +42,7 @@ const main = async () => {
 
     if (server.listening) return;
 
-    const port = env.TYPE === 'ws' ? env.WS_PORT : env.API_PORT;
+    const port = env.PORT;
 
     server.listen(port, () => {
       Log.info('listening on *:' + port);

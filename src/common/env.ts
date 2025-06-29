@@ -16,8 +16,7 @@ const origin = (): string | string[] => {
 
 export default {
   DEV_MODE: process.env.DEV_MODE === 'true',
-  API_PORT: parseInt(process.env.API_PORT as string),
-  WS_PORT: parseInt(process.env.WS_PORT as string),
+  PORT: parseInt(process.env.PORT || '3000'),
   JWT_SECRET: process.env.JWT_SECRET as string,
   CONNECTIONS_SECRET: process.env.CONNECTIONS_SECRET as string,
   JWT_CONNECTIONS_SECRET: process.env.JWT_CONNECTIONS_SECRET as string,
