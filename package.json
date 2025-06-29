@@ -13,7 +13,7 @@
     "bundle": "tsup",
     "dev-api": "tsup --watch --onSuccess \"node --enable-source-maps dist/index.mjs --api \"",
     "dev-ws": "tsup --watch --onSuccess \"node --enable-source-maps dist/index.mjs --ws \"",
-    "build": "pnpm bundle",
+    "build": "pnpm prisma:generate && pnpm bundle",
     "prisma:create": "prisma migrate dev --name",
     "prisma:migrate_dev": "prisma migrate dev",
     "prisma:migrate_deploy": "prisma migrate deploy",

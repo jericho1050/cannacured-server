@@ -14,7 +14,11 @@ services:
       - fromGroup: cannacured-shared-env # Pulls static secrets (JWT_SECRET, etc.)
       - key: DATABASE_URL
         fromDatabase:
-          name: cannacured-db # Connects to the DB created by the CDN blueprint
+          name: cannacured-db
+          property: connectionString
+      - key: DATABASE_DIRECT_URL # Add this for Prisma migrations
+        fromDatabase:
+          name: cannacured-db
           property: connectionString
       - key: REDIS_URL
         fromService:
@@ -34,6 +38,10 @@ services:
       # This service connects to the exact same infrastructure
       - fromGroup: cannacured-shared-env
       - key: DATABASE_URL
+        fromDatabase:
+          name: cannacured-db
+          property: connectionString
+      - key: DATABASE_DIRECT_URL # Add this for Prisma migrations
         fromDatabase:
           name: cannacured-db
           property: connectionString
