@@ -99,3 +99,14 @@ if (env.TYPE === 'api') {
   app.use('/api', ApplicationsRouter);
   app.use('/api', RemindersRouter);
 }
+
+if (env.TYPE === 'ws') {
+  // Health check endpoint for Render deployment monitoring
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      service: 'cannacured-ws'
+    });
+  });
+}
