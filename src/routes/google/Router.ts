@@ -4,7 +4,6 @@ import { googleCreateLink } from './googleCreateLink';
 import { googleUnlink } from './googleUnlink';
 import { googleGetAccessToken } from './googleGetAccessToken';
 
-
 const GoogleRouter = Router();
 
 googleLink(GoogleRouter);

@@ -1,0 +1,66 @@
+# render.yaml for the nerimity-server application
+# This blueprint defines the backend services and connects to existing infrastructure.
+
+services:
+  # The API Server
+  - type: web
+    name: cannacured-api
+    runtime: node
+    plan: free # Can be upgraded to 'starter' later
+    healthCheckPath: /health # Add a /health route to your Express app for monitoring
+    buildCommand: pnpm install && pnpm build
+    startCommand: pnpm prisma:migrate_deploy && pnpm start-dist-api
+    envVars:
+      - fromGroup: cannacured-shared-env # Pulls static secrets (JWT_SECRET, etc.)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cannacured-db # Connects to the DB created by the CDN blueprint
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: cannacured-redis # Connects to the Redis created by the CDN blueprint
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: cannacured-redis
+          property: port
+      - key: REDIS_PASS
+        fromService:
+          type: redis
+          name: cannacured-redis
+          property: password
+
+  # The WebSocket Server
+  - type: web
+    name: cannacured-ws
+    runtime: node
+    plan: free # Can be upgraded later
+    healthCheck:
+      type: tcp # Required for non-HTTP services
+      port: 10000
+    buildCommand: pnpm install && pnpm build
+    startCommand: pnpm start-dist-ws
+    envVars:
+      # This service connects to the exact same infrastructure
+      - fromGroup: cannacured-shared-env
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cannacured-db
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: cannacured-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: cannacured-redis
+          property: port
+      - key: REDIS_PASS
+        fromService:
+          type: redis
+          name: cannacured-redis
+          property: password

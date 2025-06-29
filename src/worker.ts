@@ -65,6 +65,15 @@ if (env.TYPE === 'api') {
 
   app.use(userIP);
 
+  // Health check endpoint for Render deployment monitoring
+  app.get('/health', (req, res) => {
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      service: 'cannacured-api'
+    });
+  });
+
   app.use('/api', OpenGraphRouter);
 
   app.use(

@@ -54,7 +54,7 @@
     "@socket.io/redis-adapter": "^8.3.0",
     "@socket.io/redis-streams-adapter": "^0.2.2",
     "arktype": "^2.1.20",
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "bottleneck": "^2.19.5",
     "connect-busboy": "^1.0.0",
     "cors": "^2.8.5",
@@ -80,5 +80,6 @@
   "optionalDependencies": {
     "bufferutil": "^4.0.9",
     "utf-8-validate": "^6.0.5"
-  }
+  },
+  "packageManager": "pnpm@10.12.4+sha512.5ea8b0deed94ed68691c9bad4c955492705c5eeb8a87ef86bc62c74a26b037b08ff9570f108b2e4dbd1dd1a9186fea925e527f141c648e85af45631074680184"
 }

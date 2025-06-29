@@ -5,6 +5,8 @@ import { generateId } from "../common/flakeId";
 import { generateHexColor, generateTag } from "../common/random";
 import { generateToken } from '../common/JWT';
 import { UserStatus } from '../types/User';
+import { env } from 'process';
+import { joinServer } from './Server';
 
 interface RegisterOpts {
   email: string;
@@ -52,6 +54,16 @@ export const registerUser = async (opts: RegisterOpts) => {
   });
 
   const userId = newAccount?.user?.id;
+
+  // Auto join official server if config 
+  if (env.OFFICIAL_SERVER_ID && userId) {
+    try {
+      console.log("joining official server {officialServerId: ", env.OFFICIAL_SERVER_ID, "userId: ", userId)
+      await joinServer(userId, env.OFFICIAL_SERVER_ID);
+    } catch (error) {
+      console.error('Failed to join official server', error);
+    }
+  }
 
   const token = generateToken(userId, newAccount.passwordVersion);
 
