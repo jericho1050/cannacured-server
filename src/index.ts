@@ -20,47 +20,58 @@ import { deleteServer } from './services/Server';
   return this.getTime();
 };
 
-const start = async () => {
-  await connectRedis();
-  if (cluster.isPrimary) {
-    await customRedisFlush();
+if (cluster.isPrimary) {
+  let cpuCount = cpus().length;
+
+  if (env.DEV_MODE) {
+    cpuCount = 1;
   }
+  let prismaConnected = false;
+
+  await connectRedis();
+  await customRedisFlush();
   await createQueueProcessor({
     prefix: env.TYPE,
     redisClient,
   });
-  createIO();
-  await prisma.$connect();
-  Log.info('Connected to PostgreSQL');
-  if (env.TYPE === 'api' && cluster.isPrimary) {
-    scheduleBumpReset();
-    vacuumSchedule();
-    scheduleDeleteMessages();
-    scheduleDeleteAccountContent();
-    removeIPAddressSchedule();
-    schedulePostViews();
-    scheduleSuspendedAccountDeletion();
-    scheduleServerDeletion();
-    removeExpiredBannedIpsSchedule();
-    removeExpiredSuspensions();
-  }
-  import('./worker');
-};
 
-if (env.DEV_MODE && cluster.isPrimary) {
-  const cpuCount = cpus().length;
+  // await redisClient.hSet('testKey', { test1: 'lol', test2: 'lol2' });
+
+  // console.log(await redisClient.hGetAll('testKey'));
+
+  createIO();
+  prisma.$connect().then(() => {
+    Log.info('Connected to PostgreSQL');
+
+    if (prismaConnected) return;
+
+    prismaConnected = true;
+
+    if (env.TYPE === 'api') {
+      scheduleBumpReset();
+      vacuumSchedule();
+      scheduleDeleteMessages();
+      scheduleDeleteAccountContent();
+      removeIPAddressSchedule();
+      schedulePostViews();
+      scheduleSuspendedAccountDeletion();
+      scheduleServerDeletion();
+      removeExpiredBannedIpsSchedule();
+      removeExpiredSuspensions();
+    }
+  });
+
   for (let i = 0; i < cpuCount; i++) {
     cluster.fork({ CLUSTER_INDEX: i });
   }
 
-  cluster.on('exit', (worker) => {
+  cluster.on('exit', (worker, code, signal) => {
     console.error(`Worker process ${worker.process.pid} died.`);
-    process.exit(1);
+    // have to just restart all clusters because of redis cache issues with socket.io online users.
+    process.exit(code);
   });
-} else if (!env.DEV_MODE) {
-  start();
-} else if (env.DEV_MODE && !cluster.isPrimary) {
-  start();
+} else {
+  import('./worker');
 }
 
 function scheduleBumpReset() {
