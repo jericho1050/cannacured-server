@@ -15,6 +15,10 @@ export const redisClient = createClient({
 });
 
 export function connectRedis(): Promise<typeof redisClient> {
+  if (redisClient.isOpen) {
+    return Promise.resolve(redisClient);
+  }
+
   return new Promise((resolve, reject) => {
     redisClient.connect();
 
