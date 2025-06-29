@@ -16,28 +16,20 @@ services:
         fromDatabase:
           name: cannacured-db # Connects to the DB created by the CDN blueprint
           property: connectionString
-      - key: REDIS_HOST
-        fromService:
-          type: redis
-          name: cannacured-redis # Connects to the Redis created by the CDN blueprint
-          property: host
-      - key: REDIS_PORT
+      - key: REDIS_URL
         fromService:
           type: redis
           name: cannacured-redis
-          property: port
-      - key: REDIS_PASS
-        fromService:
-          type: redis
-          name: cannacured-redis
-          property: password
+          property: connectionString
 
   # The WebSocket Server
   - type: web
     name: cannacured-ws
     runtime: node
     plan: free # Can be upgraded later
-    healthCheckPath: /health
+    healthCheck:
+      type: tcp # Required for non-HTTP services
+      port: 10000
     buildCommand: pnpm install && pnpm build
     startCommand: pnpm start-dist-ws
     envVars:
@@ -47,18 +39,8 @@ services:
         fromDatabase:
           name: cannacured-db
           property: connectionString
-      - key: REDIS_HOST
+      - key: REDIS_URL
         fromService:
           type: redis
           name: cannacured-redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          type: redis
-          name: cannacured-redis
-          property: port
-      - key: REDIS_PASS
-        fromService:
-          type: redis
-          name: cannacured-redis
-          property: password
+          property: connectionString
