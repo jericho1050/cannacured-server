@@ -37,9 +37,7 @@ services:
     name: cannacured-ws
     runtime: node
     plan: free # Can be upgraded later
-    healthCheck:
-      type: tcp # Required for non-HTTP services
-      port: 10000
+    healthCheckPath: /health
     buildCommand: pnpm install && pnpm build
     startCommand: pnpm start-dist-ws
     envVars:
