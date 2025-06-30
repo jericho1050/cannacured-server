@@ -6,7 +6,6 @@ import { deleteChannelAttachmentBatch, deleteImageBatch } from './common/nerimit
 import env from './common/env';
 import { connectRedis, customRedisFlush, redisClient } from './common/redis';
 import { getAndRemovePostViewsCache } from './cache/PostViewsCache';
-import timers from 'timers/promises';
 
 import cluster from 'node:cluster';
 import { createIO } from './socket/socket';
@@ -25,6 +24,9 @@ if (cluster.isPrimary) {
 
   if (env.DEV_MODE) {
     cpuCount = 1;
+  } else {
+    // Limit workers in cloud environments to prevent memory exhaustion
+    cpuCount = Math.min(cpuCount, 2); // Max 2 workers
   }
   let prismaConnected = false;
 
@@ -34,6 +36,20 @@ if (cluster.isPrimary) {
     prefix: env.TYPE,
     redisClient,
   });
+
+  // Memory monitoring and cleanup
+  if (!env.DEV_MODE) {
+    setInterval(() => {
+      const memUsage = process.memoryUsage();
+      Log.info(`Memory Usage: RSS: ${Math.round(memUsage.rss / 1024 / 1024)}MB, Heap: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`);
+
+      // Force garbage collection if available
+      if (global.gc && memUsage.heapUsed > 800 * 1024 * 1024) { // 800MB threshold
+        global.gc();
+        Log.info('Forced garbage collection');
+      }
+    }, 300000); // Every 5 minutes
+  }
 
   // await redisClient.hSet('testKey', { test1: 'lol', test2: 'lol2' });
 
@@ -65,7 +81,7 @@ if (cluster.isPrimary) {
     cluster.fork({ CLUSTER_INDEX: i });
   }
 
-  cluster.on('exit', (worker, code, signal) => {
+  cluster.on('exit', (worker, code) => {
     console.error(`Worker process ${worker.process.pid} died.`);
     // have to just restart all clusters because of redis cache issues with socket.io online users.
     process.exit(code);
@@ -90,7 +106,7 @@ function scheduleBumpReset() {
 async function scheduleDeleteAccountContent() {
   setInterval(async () => {
     const likedPosts = await prisma.postLike.findMany({
-      take: 300,
+      take: 100,
       where: {
         likedBy: {
           account: null,
@@ -106,7 +122,7 @@ async function scheduleDeleteAccountContent() {
     }
 
     const messages = await prisma.message.findMany({
-      take: 300,
+      take: 100,
       orderBy: {
         createdAt: 'desc',
       },
@@ -121,7 +137,7 @@ async function scheduleDeleteAccountContent() {
     const messageIds = messages.map((m) => m.id);
 
     const posts = await prisma.post.findMany({
-      take: 300,
+      take: 100,
       orderBy: {
         createdAt: 'desc',
       },
@@ -206,10 +222,10 @@ function scheduleDeleteMessages() {
           FROM "messages"
           WHERE "channelId"=${details.channelId}
           ORDER BY "createdAt" DESC
-          LIMIT 300       
+          LIMIT 100       
       );
     `;
-    if (deletedCount < 300) {
+    if (deletedCount < 100) {
       await prisma.$transaction([
         prisma.scheduleMessageDelete.update({
           where: { channelId: details.channelId },
@@ -254,22 +270,29 @@ async function removeIPAddressSchedule() {
 }
 
 async function removeExpiredSuspensions() {
-  await prisma.suspension
-    .deleteMany({
-      limit: 100,
-      where: {
-        expireAt: {
-          not: null,
-          lte: new Date(Date.now()),
+  const processExpiredSuspensions = async () => {
+    await prisma.suspension
+      .deleteMany({
+        limit: 50,
+        where: {
+          expireAt: {
+            not: null,
+            lte: new Date(Date.now()),
+          },
         },
-      },
-    })
-    .catch((err) => {
-      console.error(err);
-    });
-  await timers.setTimeout(60000); // 1 minute
-  removeExpiredSuspensions();
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  };
+
+  // Initial run
+  await processExpiredSuspensions();
+
+  // Set up interval for subsequent runs
+  setInterval(processExpiredSuspensions, 60000); // 1 minute
 }
+
 async function removeExpiredBannedIps() {
   await prisma.bannedIp.deleteMany({
     where: {
@@ -317,7 +340,8 @@ async function updatePostViews() {
 function scheduleSuspendedAccountDeletion() {
   const oneMinuteToMilliseconds = 1 * 60 * 1000;
   const fifteenDaysInThePast = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
-  setTimeout(async () => {
+
+  setInterval(async () => {
     const suspension = await prisma.suspension.findFirst({
       where: {
         expireAt: null,
@@ -354,14 +378,13 @@ function scheduleSuspendedAccountDeletion() {
         console.error(err);
       }
     }
-
-    scheduleSuspendedAccountDeletion();
   }, oneMinuteToMilliseconds);
 }
 function scheduleServerDeletion() {
   const oneMinuteToMilliseconds = 1 * 60 * 1000;
   const fiveDaysInThePast = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000);
-  setTimeout(async () => {
+
+  setInterval(async () => {
     const scheduleItem = await prisma.scheduleServerDelete.findFirst({
       where: {
         scheduledAt: {
@@ -383,7 +406,5 @@ function scheduleServerDeletion() {
         console.error(err);
       }
     }
-
-    scheduleServerDeletion();
   }, oneMinuteToMilliseconds);
 }

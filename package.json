@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsup --watch --onSuccess \"pnpm start-dist-both \"",
     "start-dist-both": "concurrently \"pnpm start-dist-api\" \"pnpm start-dist-ws\"",
-    "start-dist-api": "node --trace-warnings --enable-source-maps dist/index.mjs --api",
-    "start-dist-ws": "node --trace-warnings --enable-source-maps dist/index.mjs --ws",
+    "start-dist-api": "node --trace-warnings --enable-source-maps --expose-gc dist/index.mjs --api",
+    "start-dist-ws": "node --trace-warnings --enable-source-maps --expose-gc dist/index.mjs --ws",
     "start-api": "tsup --onSuccess \"node --trace-warnings --enable-source-maps dist/index.mjs --api \"",
     "start-ws": "tsup --onSuccess \"node --trace-warnings --enable-source-maps dist/index.mjs --ws \"",
     "bundle": "tsup",
