@@ -4,11 +4,7 @@ import { POST_VIEWS_KEY, WS_KEYS } from '../cache/CacheKeys';
 import { Log } from './Log';
 
 export const redisClient = createClient({
-  socket: {
-    host: env.REDIS_HOST,
-    port: env.REDIS_PORT,
-  },
-  password: env.REDIS_PASS,
+  url: env.REDIS_URL,
 });
 
 export function connectRedis(): Promise<typeof redisClient> {
