@@ -30,7 +30,7 @@ services:
   - type: web
     name: cannacured-ws
     runtime: node
-    plan: standard
+    plan: pro
     healthCheckPath: /health
     buildCommand: pnpm install && pnpm build
     startCommand: pnpm start-dist-ws

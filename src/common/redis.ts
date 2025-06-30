@@ -5,30 +5,22 @@ import { Log } from './Log';
 
 export const redisClient = createClient({
   url: env.REDIS_URL,
-  socket: env.REDIS_URL
-    ? undefined
-    : {
-      host: env.REDIS_HOST,
-      port: env.REDIS_PORT,
-    },
-  password: env.REDIS_URL ? undefined : env.REDIS_PASS,
+  socket: {
+    host: env.REDIS_HOST,
+    port: env.REDIS_PORT,
+    reconnectStrategy: (retries) => Math.min(retries * 50, 5000),
+  },
+  password: env.REDIS_PASS,
 });
 
-export function connectRedis(): Promise<typeof redisClient> {
+redisClient.on('error', (err) => Log.error('Redis Client Error', err));
+
+export async function connectRedis(): Promise<typeof redisClient> {
   if (redisClient.isOpen) {
-    return Promise.resolve(redisClient);
+    return redisClient;
   }
-
-  return new Promise((resolve, reject) => {
-    redisClient.connect();
-
-    redisClient.on('connect', async () => {
-      resolve(redisClient);
-    });
-    redisClient.on('error', (err) => {
-      reject(err);
-    });
-  });
+  await redisClient.connect();
+  return redisClient;
 }
 
 export async function customRedisFlush() {

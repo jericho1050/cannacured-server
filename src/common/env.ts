@@ -14,9 +14,20 @@ const origin = (): string | string[] => {
   return process.env.ORIGIN;
 };
 
+const getPort = (): number => {
+  // Render provides the PORT env var for production
+  if (process.env.PORT) {
+    return parseInt(process.env.PORT, 10);
+  }
+
+  // Fallback for local development, assigning different ports
+  const isWs = process.argv.includes('--ws');
+  return parseInt(isWs ? process.env.WS_PORT || '3002' : process.env.API_PORT || '3001', 10);
+};
+
 export default {
   DEV_MODE: process.env.DEV_MODE === 'true',
-  PORT: parseInt(process.env.PORT || '3000'),
+  PORT: process.env.DEV_MODE ? getPort() : parseInt(process.env.PORT || '3000'),
   JWT_SECRET: process.env.JWT_SECRET as string,
   CONNECTIONS_SECRET: process.env.CONNECTIONS_SECRET as string,
   JWT_CONNECTIONS_SECRET: process.env.JWT_CONNECTIONS_SECRET as string,
@@ -54,6 +65,6 @@ export default {
   TENOR_API_KEY: process.env.TENOR_API_KEY as string,
   CLUSTER_INDEX: parseInt(process.env.CLUSTER_INDEX as string),
   OPTIMIZE_API_KEY: process.env.OPTIMIZE_API_KEY as string,
-  TYPE: (process.argv.includes('--ws') ? 'ws' : 'api') as 'api' | 'ws',
+  TYPE: (process.argv.includes('--ws') ? 'ws' : process.argv.includes('--worker') ? 'worker' : 'api') as 'api' | 'ws' | 'worker',
   EXTERNAL_EMBED_SECRET: process.env.EXTERNAL_EMBED_SECRET as string,
 };
