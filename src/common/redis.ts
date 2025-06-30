@@ -4,23 +4,24 @@ import { POST_VIEWS_KEY, WS_KEYS } from '../cache/CacheKeys';
 import { Log } from './Log';
 
 export const redisClient = createClient({
-  url: env.REDIS_URL,
   socket: {
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
-    reconnectStrategy: (retries) => Math.min(retries * 50, 5000),
   },
   password: env.REDIS_PASS,
 });
 
-redisClient.on('error', (err) => Log.error('Redis Client Error', err));
+export function connectRedis(): Promise<typeof redisClient> {
+  return new Promise((resolve, reject) => {
+    redisClient.connect();
 
-export async function connectRedis(): Promise<typeof redisClient> {
-  if (redisClient.isOpen) {
-    return redisClient;
-  }
-  await redisClient.connect();
-  return redisClient;
+    redisClient.on('connect', async () => {
+      resolve(redisClient);
+    });
+    redisClient.on('error', (err) => {
+      reject(err);
+    });
+  });
 }
 
 export async function customRedisFlush() {
